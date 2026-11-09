@@ -1,3 +1,4 @@
+
 name: Cyber Nation - APK Android
 
 on:
@@ -25,17 +26,16 @@ jobs:
           ZIP_FILE="$(find . -maxdepth 1 -type f -iname '*.zip' | head -n 1)"
           if [ -z "$ZIP_FILE" ]; then
             echo 'Nenhum arquivo ZIP encontrado na raiz do repositório.'
-            echo 'Envie o pacote Cyber Nation .zip para a raiz do repositório.'
             exit 1
           fi
           cp "$ZIP_FILE" /tmp/cyber-nation-project.zip
           rm -f "$ZIP_FILE"
           mkdir -p extracted
           unzip -q /tmp/cyber-nation-project.zip -d extracted
-          PROJECT_FILE="$(find extracted -mindepth 2 -maxdepth 4 -type f -name project.godot | head -n 1)"
+          PROJECT_FILE="$(find extracted -mindepth 2 -maxdepth 5 -type f -name project.godot | head -n 1)"
           if [ -z "$PROJECT_FILE" ]; then
             echo 'Não encontrei project.godot dentro do ZIP.'
-            find extracted -maxdepth 4 -type f
+            find extracted -maxdepth 5 -type f
             exit 1
           fi
           PROJECT_DIR="$(dirname "$PROJECT_FILE")"
@@ -50,13 +50,30 @@ jobs:
           java-version: '17'
 
       - name: Configurar Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          packages: 'platform-tools'
-
-      - name: Instalar componentes do Android
+        shell: bash
         run: |
-          sdkmanager "platforms;android-34" "build-tools;34.0.0"
+          set -euxo pipefail
+
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
+
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
+          if [ -z "$SDKMANAGER" ]; then
+            echo "sdkmanager não encontrado em $SDK_ROOT/cmdline-tools"
+            exit 1
+          fi
+
+          chmod +x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --sdk_root="$SDK_ROOT" --licenses || true
+
+          "$SDKMANAGER" --sdk_root="$SDK_ROOT" \
+            "platform-tools" \
+            "platforms;android-34" \
+            "build-tools;34.0.0"
+
+          echo "$(dirname "$SDKMANAGER")" >> "$GITHUB_PATH"
+          echo "$SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
 
       - name: Baixar Godot 4.3 e templates Android
         run: |

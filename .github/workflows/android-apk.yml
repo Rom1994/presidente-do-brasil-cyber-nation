@@ -55,9 +55,6 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-
-      - name: Configurar Android SDK
-        shell: bash
         
       - name: Configurar Android SDK
         shell: bash

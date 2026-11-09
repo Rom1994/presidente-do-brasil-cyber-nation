@@ -1,0 +1,80 @@
+
+name: Diagnostico do Projeto Cyber Nation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostico:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositorio
+        uses: actions/checkout@v4
+
+      - name: Preparar diagnostico
+        shell: bash
+        run: |
+          set -euo pipefail
+          ZIP="CyberNation_Projeto_ZIP_para_GitHub.zip"
+          WORK="$RUNNER_TEMP/cyber-nation"
+          OUT="diagnostico-cyber-nation"
+
+          if [ ! -f "$ZIP" ]; then
+            echo "ZIP nao encontrado na raiz."
+            exit 1
+          fi
+
+          mkdir -p "$WORK" "$OUT"
+          unzip -q "$ZIP" -d "$WORK"
+
+          PROJECT_FILE="$(find "$WORK" -type f -name project.godot -print -quit)"
+          if [ -z "$PROJECT_FILE" ]; then
+            echo "project.godot nao encontrado."
+            find "$WORK" -type f | sort > "$OUT/arquivos-encontrados.txt"
+            exit 1
+          fi
+
+          PROJECT_DIR="$(dirname "$PROJECT_FILE")"
+
+          {
+            echo "DIAGNOSTICO CYBER NATION"
+            echo "Data: $(date -u)"
+            echo
+            echo "TOTAL DE ARQUIVOS: $(find "$PROJECT_DIR" -type f | wc -l)"
+            echo "SCRIPTS GD: $(find "$PROJECT_DIR" -name '*.gd' | wc -l)"
+            echo "CENAS: $(find "$PROJECT_DIR" -name '*.tscn' | wc -l)"
+            echo "RECURSOS: $(find "$PROJECT_DIR" -name '*.tres' | wc -l)"
+            echo
+            echo "ESTRUTURA:"
+            find "$PROJECT_DIR" -type f | sed "s#^$PROJECT_DIR/##" | sort
+          } > "$OUT/diagnostico-projeto.txt"
+
+          mkdir -p "$OUT/projeto"
+          cp "$PROJECT_FILE" "$OUT/projeto/project.godot"
+
+          (
+            cd "$PROJECT_DIR"
+            find . -type f \( -name '*.gd' -o -name '*.tscn' -o -name '*.tres' -o -name '*.gdshader' \) \
+              -exec cp --parents '{}' "$GITHUB_WORKSPACE/$OUT/projeto/" \;
+          )
+
+          {
+            echo
+            echo "CONTEUDO DOS SCRIPTS"
+            while IFS= read -r file; do
+              echo
+              echo "### ${file#"$PROJECT_DIR"/}"
+              cat "$file"
+            done < <(find "$PROJECT_DIR" -type f -name '*.gd' | sort)
+          } >> "$OUT/diagnostico-projeto.txt"
+
+      - name: Publicar diagnostico
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostico-cyber-nation
+          path: diagnostico-cyber-nation/
+          if-no-files-found: error
+          retention-days: 7

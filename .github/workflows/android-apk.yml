@@ -184,42 +184,24 @@ jobs:
           echo "Configuração Android validada."
 
       
-      - name: Diagnosticar exportação Android
+      
+      - name: Gerar APK de teste
         shell: bash
         run: |
+          set -euxo pipefail
+
           mkdir -p build
 
-          echo "===== VERSÃO DO GODOT ====="
-          godot --version
+          godot --headless --editor --path . --import
 
-          echo "===== PRESET ANDROID ====="
-          cat export_presets.cfg
-
-          echo "===== TEMPLATES ANDROID ====="
-          ls -lh "$HOME/.local/share/godot/export_templates/4.3.stable/"
-
-          echo "===== CHAVE DE DEPURAÇÃO ====="
-          keytool -list \
-            -keystore "$HOME/.android/debug.keystore" \
-            -storepass android
-
-          echo "===== EXPORTAÇÃO DETALHADA ====="
-
-          set +e
           godot --headless --verbose --path . \
             --export-debug "Android" \
-            build/CyberNation-debug.apk \
-            2>&1 | tee build/export-log.txt
-
-          RESULT=${PIPESTATUS[0]}
-          set -e
-
-          if [ "$RESULT" -ne 0 ]; then
-            echo "===== ERRO NA EXPORTAÇÃO ====="
-            exit "$RESULT"
-          fi
+            build/CyberNation-debug.apk
 
           test -s build/CyberNation-debug.apk
+
+          echo "APK gerado com sucesso!"
+
 
       - name: Publicar APK
         if: success()

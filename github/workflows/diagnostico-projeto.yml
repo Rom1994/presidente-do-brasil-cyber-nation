@@ -1,5 +1,5 @@
 
-name: Diagnostico do Projeto Cyber Nation
+name: Diagnostico do Projeto Cyber Nation 
 
 on:
   workflow_dispatch:
